@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="LLM Prompt to Product - Project Evaluation Portal for student PPT submissions and rubric-based evaluation.">
+  <title>LLM Prompt to Product | Evaluation Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ===== LOGIN PAGE ===== -->
+  <div class="page login-page active" id="loginPage">
+    <div class="login-header">
+      <h1>LLM Prompt to Product</h1>
+      <p>Project Evaluation Portal</p>
+    </div>
+    <div class="login-container">
+      <!-- Student Card -->
+      <div class="login-card" id="studentLoginCard">
+        <div class="login-card-icon">🎓</div>
+        <h2>Student</h2>
+        <p class="card-desc">Register and upload your project presentation</p>
+        
+        <div class="tab-container">
+          <button class="tab-btn active" data-tab="studentLogin" onclick="switchTab('student', 'studentLogin')">Login</button>
+          <button class="tab-btn" data-tab="studentRegister" onclick="switchTab('student', 'studentRegister')">Register</button>
+        </div>
+
+        <!-- Student Login -->
+        <div class="tab-content active" id="studentLogin">
+          <form onsubmit="handleStudentLogin(event)">
+            <div class="form-group">
+              <label>Register Number <span class="required">*</span></label>
+              <input type="text" class="form-input" id="loginRegNo" placeholder="Enter your register number" required>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full btn-lg">Sign In</button>
+          </form>
+        </div>
+
+        <!-- Student Register -->
+        <div class="tab-content" id="studentRegister">
+          <form onsubmit="handleStudentRegister(event)">
+            <div class="form-group">
+              <label>Full Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="regName" placeholder="Enter your full name" required>
+            </div>
+            <div class="form-group">
+              <label>Register Number <span class="required">*</span></label>
+              <input type="text" class="form-input" id="regRegNo" placeholder="Enter your register number" required>
+            </div>
+            <div class="form-group">
+              <label>Email <span class="required">*</span></label>
+              <input type="email" class="form-input" id="regEmail" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+              <label>Phone Number <span class="required">*</span></label>
+              <input type="tel" class="form-input" id="regPhone" placeholder="Enter your phone number" required>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <input type="password" class="form-input" id="regPassword" placeholder="Create a password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full btn-lg">Create Account</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Admin Card -->
+      <div class="login-card" id="adminLoginCard">
+        <div class="login-card-icon">🛡️</div>
+        <h2>Administrator</h2>
+        <p class="card-desc">Evaluate and score student presentations</p>
+        
+        <form onsubmit="handleAdminLogin(event)">
+          <div class="form-group">
+            <label>Username <span class="required">*</span></label>
+            <input type="text" class="form-input" id="adminUsername" placeholder="Enter admin username" required>
+          </div>
+          <div class="form-group">
+            <label>Password <span class="required">*</span></label>
+            <input type="password" class="form-input" id="adminPassword" placeholder="Enter admin password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg">Sign In as Admin</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STUDENT DASHBOARD ===== -->
+  <div class="page dashboard-page" id="studentDashboard">
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <div class="navbar-logo">LP</div>
+        <div>
+          <div class="navbar-title">LLM Prompt to Product</div>
+          <div class="navbar-subtitle">Student Portal</div>
+        </div>
+      </div>
+      <div class="navbar-user">
+        <div class="navbar-user-info">
+          <div class="navbar-user-name" id="studentNameDisplay"></div>
+          <div class="navbar-user-role">Student</div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="dashboard-content">
+      <div class="dashboard-header">
+        <h1>📂 Submit Your Project</h1>
+        <p>Upload your PPT presentation for evaluation</p>
+      </div>
+
+      <!-- Submission Status (shown after submission) -->
+      <div class="submission-status" id="submissionStatus" style="display: none;">
+        <h2>✅ Submission Status</h2>
+        <div class="status-info" id="statusInfo"></div>
+        <div id="scoreResultArea"></div>
+      </div>
+
+      <!-- Upload Form -->
+      <div class="upload-section" id="uploadSection">
+        <h2>📤 Upload Presentation</h2>
+        <form onsubmit="handleSubmission(event)" id="submissionForm">
+          <div class="upload-area" id="uploadArea" onclick="document.getElementById('pptFile').click()">
+            <div class="upload-icon">📎</div>
+            <div class="upload-text">Click to upload or drag and drop</div>
+            <div class="upload-hint">PPT, PPTX, PDF files (Max 10MB)</div>
+            <div class="upload-file-name" id="fileName"></div>
+          </div>
+          <input type="file" id="pptFile" accept=".ppt,.pptx,.pdf" onchange="handleFileSelect(event)">
+
+          <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-success btn-full btn-lg" id="submitBtn">
+              📨 Submit Presentation
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN DASHBOARD ===== -->
+  <div class="page dashboard-page" id="adminDashboard">
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <div class="navbar-logo">LP</div>
+        <div>
+          <div class="navbar-title">LLM Prompt to Product</div>
+          <div class="navbar-subtitle">Admin Panel</div>
+        </div>
+      </div>
+      <div class="navbar-user">
+        <div class="navbar-user-info">
+          <div class="navbar-user-name">Administrator</div>
+          <div class="navbar-user-role">Admin</div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="dashboard-content">
+      <div class="dashboard-header">
+        <h1>📊 Evaluation Dashboard</h1>
+        <p>Review and evaluate student project presentations</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">Total Submissions</div>
+          <div class="stat-card-value" id="totalSubmissions">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Evaluated</div>
+          <div class="stat-card-value" id="evaluatedCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Pending</div>
+          <div class="stat-card-value" id="pendingCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Average Score</div>
+          <div class="stat-card-value" id="avgScore">—</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-section">
+        <div class="table-header">
+          <h2>📋 Student Submissions</h2>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div class="search-wrapper">
+              <input type="text" class="search-input" id="searchInput" placeholder="Search students..." oninput="renderSubmissionsTable()">
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAllSubmissions()">🗑️ Delete All</button>
+          </div>
+        </div>
+        <div class="table-overflow">
+          <table class="data-table" id="submissionsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Register No</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>PPT</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="submissionsTableBody">
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-text">No submissions found</div>
+          <div class="empty-state-subtext">Student submissions will appear here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EVALUATION MODAL ===== -->
+  <div class="modal-overlay" id="evalModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📝 Evaluate Submission</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Student Info -->
+        <div class="student-info-grid" id="modalStudentInfo"></div>
+
+        <!-- Rubrics -->
+        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">Scoring Rubrics</h3>
+        <div class="rubric-list" id="rubricList"></div>
+
+        <!-- Total Score -->
+        <div class="total-score-bar">
+          <div class="total-score-label">Total Score</div>
+          <div class="total-score-value" id="modalTotalScore">0 / 100</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-success" onclick="saveEvaluation()">💾 Save Evaluation</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
