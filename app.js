@@ -10,20 +10,41 @@ const RUBRICS = [
   { id: 'presentation', name: 'Presentation', max: 15 }
 ];
 
-function getStudents() {
-  return JSON.parse(localStorage.getItem('llm_students') || '[]');
+// ===== SHARED STORAGE HELPERS =====
+// All data is stored as shared so admin can see submissions from any device.
+
+async function getStudents() {
+  try {
+    const result = await window.storage.get('llm_students', true);
+    return result ? JSON.parse(result.value) : [];
+  } catch {
+    return [];
+  }
 }
 
-function saveStudents(students) {
-  localStorage.setItem('llm_students', JSON.stringify(students));
+async function saveStudents(students) {
+  try {
+    await window.storage.set('llm_students', JSON.stringify(students), true);
+  } catch (e) {
+    console.error('Failed to save students:', e);
+  }
 }
 
-function getSubmissions() {
-  return JSON.parse(localStorage.getItem('llm_submissions') || '[]');
+async function getSubmissions() {
+  try {
+    const result = await window.storage.get('llm_submissions', true);
+    return result ? JSON.parse(result.value) : [];
+  } catch {
+    return [];
+  }
 }
 
-function saveSubmissions(submissions) {
-  localStorage.setItem('llm_submissions', JSON.stringify(submissions));
+async function saveSubmissions(submissions) {
+  try {
+    await window.storage.set('llm_submissions', JSON.stringify(submissions), true);
+  } catch (e) {
+    console.error('Failed to save submissions:', e);
+  }
 }
 
 let currentUser = null;
@@ -49,7 +70,7 @@ function showPage(pageId) {
 function switchTab(card, tabId) {
   const cardEl = card === 'student' ? document.getElementById('studentLoginCard') : null;
   if (!cardEl) return;
-  
+
   cardEl.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
@@ -59,9 +80,9 @@ function switchTab(card, tabId) {
 }
 
 // ===== STUDENT REGISTRATION =====
-function handleStudentRegister(e) {
+async function handleStudentRegister(e) {
   e.preventDefault();
-  
+
   const name = document.getElementById('regName').value.trim();
   const regNo = document.getElementById('regRegNo').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -73,20 +94,18 @@ function handleStudentRegister(e) {
     return;
   }
 
-  // Validate phone
   if (!/^\d{10}$/.test(phone)) {
     showToast('Phone number must be 10 digits', 'error');
     return;
   }
 
-  // Validate email
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     showToast('Please enter a valid email', 'error');
     return;
   }
 
-  const students = getStudents();
-  
+  const students = await getStudents();
+
   if (students.find(s => s.regNo === regNo)) {
     showToast('Register number already exists', 'error');
     return;
@@ -98,11 +117,10 @@ function handleStudentRegister(e) {
   }
 
   students.push({ name, regNo, email, phone, password });
-  saveStudents(students);
-  
+  await saveStudents(students);
+
   showToast('Registration successful! You can now login.', 'success');
-  
-  // Clear form & switch to login
+
   document.getElementById('regName').value = '';
   document.getElementById('regRegNo').value = '';
   document.getElementById('regEmail').value = '';
@@ -112,9 +130,9 @@ function handleStudentRegister(e) {
 }
 
 // ===== STUDENT LOGIN =====
-function handleStudentLogin(e) {
+async function handleStudentLogin(e) {
   e.preventDefault();
-  
+
   const regNo = document.getElementById('loginRegNo').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
 
@@ -123,7 +141,7 @@ function handleStudentLogin(e) {
     return;
   }
 
-  const students = getStudents();
+  const students = await getStudents();
   const student = students.find(s => s.regNo === regNo && s.password === password);
 
   if (!student) {
@@ -160,12 +178,11 @@ function handleLogout() {
   currentUser = null;
   currentEvalRegNo = null;
   selectedFile = null;
-  
-  // Clear all form fields
+
   document.querySelectorAll('.form-input').forEach(i => i.value = '');
   document.getElementById('fileName').textContent = '';
   document.getElementById('uploadArea').classList.remove('has-file');
-  
+
   showPage('loginPage');
   showToast('Logged out successfully', 'info');
 }
@@ -177,12 +194,6 @@ function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const allowedTypes = [
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/pdf'
-  ];
-  
   const allowedExts = ['.ppt', '.pptx', '.pdf'];
   const ext = '.' + file.name.split('.').pop().toLowerCase();
 
@@ -222,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadArea.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
     if (file) {
-      // Trigger through the input for consistency
       const input = document.getElementById('pptFile');
       const dt = new DataTransfer();
       dt.items.add(file);
@@ -233,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== STUDENT SUBMISSION =====
-function handleSubmission(e) {
+async function handleSubmission(e) {
   e.preventDefault();
 
   if (!selectedFile) {
@@ -246,18 +256,16 @@ function handleSubmission(e) {
     return;
   }
 
-  // Check if already submitted
-  const submissions = getSubmissions();
+  const submissions = await getSubmissions();
   if (submissions.find(s => s.regNo === currentUser.regNo)) {
     showToast('You have already submitted your presentation', 'error');
     return;
   }
 
-  // Read file as base64
   const reader = new FileReader();
-  reader.onload = function(ev) {
+  reader.onload = async function(ev) {
     const fileData = ev.target.result;
-    
+
     submissions.push({
       name: currentUser.name,
       regNo: currentUser.regNo,
@@ -270,7 +278,7 @@ function handleSubmission(e) {
       evaluation: null
     });
 
-    saveSubmissions(submissions);
+    await saveSubmissions(submissions);
     selectedFile = null;
     showToast('Presentation submitted successfully! 🎉', 'success');
     loadStudentDashboard();
@@ -284,10 +292,10 @@ function handleSubmission(e) {
 }
 
 // ===== STUDENT DASHBOARD LOAD =====
-function loadStudentDashboard() {
+async function loadStudentDashboard() {
   if (!currentUser) return;
 
-  const submissions = getSubmissions();
+  const submissions = await getSubmissions();
   const sub = submissions.find(s => s.regNo === currentUser.regNo);
 
   if (sub) {
@@ -323,7 +331,6 @@ function loadStudentDashboard() {
 
     document.getElementById('statusInfo').innerHTML = statusHTML;
 
-    // Show success message (scores are only visible to admin)
     const scoreArea = document.getElementById('scoreResultArea');
     scoreArea.innerHTML = `
       <div style="margin-top: 20px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; color: #10b981; font-size: 14px;">
@@ -337,13 +344,13 @@ function loadStudentDashboard() {
 }
 
 // ===== ADMIN DASHBOARD LOAD =====
-function loadAdminDashboard() {
-  const submissions = getSubmissions();
-  
+async function loadAdminDashboard() {
+  const submissions = await getSubmissions();
+
   const total = submissions.length;
   const evaluated = submissions.filter(s => s.evaluation).length;
   const pending = total - evaluated;
-  
+
   let avgScoreVal = '—';
   if (evaluated > 0) {
     const totalScore = submissions
@@ -363,10 +370,10 @@ function loadAdminDashboard() {
 }
 
 // ===== RENDER TABLE =====
-function renderSubmissionsTable() {
-  const submissions = getSubmissions();
+async function renderSubmissionsTable() {
+  const submissions = await getSubmissions();
   const searchQuery = (document.getElementById('searchInput')?.value || '').toLowerCase();
-  
+
   const filtered = submissions.filter(s => {
     if (!searchQuery) return true;
     return s.name.toLowerCase().includes(searchQuery) ||
@@ -390,7 +397,7 @@ function renderSubmissionsTable() {
 
   tbody.innerHTML = filtered.map((sub, i) => {
     const isEvaluated = !!sub.evaluation;
-    const totalScore = isEvaluated 
+    const totalScore = isEvaluated
       ? RUBRICS.reduce((sum, r) => sum + (sub.evaluation[r.id] || 0), 0)
       : 0;
 
@@ -432,8 +439,8 @@ function renderSubmissionsTable() {
 }
 
 // ===== DOWNLOAD PPT =====
-function downloadPPT(regNo) {
-  const submissions = getSubmissions();
+async function downloadPPT(regNo) {
+  const submissions = await getSubmissions();
   const sub = submissions.find(s => s.regNo === regNo);
   if (!sub || !sub.fileData) {
     showToast('File not found', 'error');
@@ -449,33 +456,32 @@ function downloadPPT(regNo) {
 }
 
 // ===== DELETE SUBMISSION =====
-function deleteSubmission(regNo) {
+async function deleteSubmission(regNo) {
   if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) return;
 
-  let submissions = getSubmissions();
+  let submissions = await getSubmissions();
   submissions = submissions.filter(s => s.regNo !== regNo);
-  saveSubmissions(submissions);
+  await saveSubmissions(submissions);
 
   loadAdminDashboard();
   showToast('Submission deleted successfully', 'success');
 }
 
-function deleteAllSubmissions() {
+async function deleteAllSubmissions() {
   if (!confirm('Are you sure you want to delete ALL submissions? This action cannot be undone.')) return;
 
-  saveSubmissions([]);
+  await saveSubmissions([]);
   loadAdminDashboard();
   showToast('All submissions deleted', 'success');
 }
 
 // ===== EVALUATION MODAL =====
-function openEvaluation(regNo) {
+async function openEvaluation(regNo) {
   currentEvalRegNo = regNo;
-  const submissions = getSubmissions();
+  const submissions = await getSubmissions();
   const sub = submissions.find(s => s.regNo === regNo);
   if (!sub) return;
 
-  // Fill student info
   document.getElementById('modalStudentInfo').innerHTML = `
     <div class="student-info-item">
       <label>Name</label>
@@ -495,7 +501,6 @@ function openEvaluation(regNo) {
     </div>
   `;
 
-  // Build rubric sliders
   const rubricList = document.getElementById('rubricList');
   rubricList.innerHTML = RUBRICS.map(r => {
     const currentValue = sub.evaluation ? (sub.evaluation[r.id] || 0) : 0;
@@ -505,7 +510,7 @@ function openEvaluation(regNo) {
           <span class="rubric-name">${r.name}</span>
           <span class="rubric-score-display" id="display_${r.id}">${currentValue} / ${r.max}</span>
         </div>
-        <input type="range" class="rubric-slider" id="slider_${r.id}" 
+        <input type="range" class="rubric-slider" id="slider_${r.id}"
                min="0" max="${r.max}" value="${currentValue}" step="1"
                oninput="updateRubricDisplay('${r.id}', this.value, ${r.max})">
       </div>
@@ -535,10 +540,10 @@ function closeModal() {
   currentEvalRegNo = null;
 }
 
-function saveEvaluation() {
+async function saveEvaluation() {
   if (!currentEvalRegNo) return;
 
-  const submissions = getSubmissions();
+  const submissions = await getSubmissions();
   const subIndex = submissions.findIndex(s => s.regNo === currentEvalRegNo);
   if (subIndex === -1) return;
 
@@ -549,7 +554,7 @@ function saveEvaluation() {
   });
 
   submissions[subIndex].evaluation = evaluation;
-  saveSubmissions(submissions);
+  await saveSubmissions(submissions);
 
   closeModal();
   loadAdminDashboard();
@@ -557,8 +562,8 @@ function saveEvaluation() {
 }
 
 // ===== EXPORT CSV =====
-function exportCSV() {
-  const submissions = getSubmissions();
+async function exportCSV() {
+  const submissions = await getSubmissions();
   if (submissions.length === 0) {
     showToast('No submissions to export', 'error');
     return;
@@ -573,7 +578,7 @@ function exportCSV() {
       sub.name, sub.regNo, sub.email, sub.phone, sub.fileName,
       new Date(sub.submittedAt).toLocaleString()
     ];
-    
+
     let total = 0;
     RUBRICS.forEach(r => {
       const score = sub.evaluation ? (sub.evaluation[r.id] || 0) : 0;
@@ -596,7 +601,7 @@ function exportCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   showToast('CSV exported successfully!', 'success');
 }
 
